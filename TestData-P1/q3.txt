@@ -1,0 +1,5 @@
+3
+1
+(n_regionkey = 3) AND
+(n_nationkey > 10) AND
+(n_name > 'JAPAN')

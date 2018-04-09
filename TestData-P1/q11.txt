@@ -1,0 +1,7 @@
+3
+7
+(l_shipdate > '1994-01-01') AND
+(l_shipdate < '1994-01-04') AND
+(l_discount > 0.049) AND
+(l_discount < 0.061) AND
+(l_quantity = 4.0)

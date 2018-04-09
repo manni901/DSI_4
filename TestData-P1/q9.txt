@@ -1,0 +1,5 @@
+3
+5
+(ps_availqty < 10) AND
+(ps_supplycost > 100.0) AND
+(ps_suppkey < 300)

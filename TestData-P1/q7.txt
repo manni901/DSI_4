@@ -1,0 +1,7 @@
+3
+4
+(p_brand = 'Brand#13') AND
+(p_retailprice > 500.0) AND
+(p_retailprice < 930.0) AND
+(p_size > 28) AND
+(p_size < 1000000)

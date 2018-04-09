@@ -1,0 +1,4 @@
+3
+2
+(r_name < 'MIDDLE EAST') AND
+(r_regionkey > 1)

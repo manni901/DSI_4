@@ -1,0 +1,7 @@
+3
+6
+(o_orderpriority = '1-URGENT') AND
+(o_orderstatus = 'O') AND
+(o_shippriority = 0) AND
+(o_totalprice > 1015.68) AND
+(o_totalprice < 1051.89)
