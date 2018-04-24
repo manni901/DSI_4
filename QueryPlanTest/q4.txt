@@ -1,0 +1,4 @@
+SELECT DISTINCT c1.c_name, c1.c_address, c1.c_acctbal 
+FROM customer AS c1, customer AS c2 
+WHERE (c1.c_nationkey = c2.c_nationkey) AND
+	  (c1.c_name ='Customer#000070919')

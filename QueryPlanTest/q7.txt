@@ -1,0 +1,6 @@
+SELECT DISTINCT c.c_name 
+FROM lineitem AS l, orders AS o, customer AS c, nation AS n, region AS r 
+WHERE (l.l_orderkey = o.o_orderkey) AND
+      (o.o_custkey = c.c_custkey) AND 
+	  (c.c_nationkey = n.n_nationkey) AND
+	  (n.n_regionkey = r.r_regionkey)

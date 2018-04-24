@@ -1,0 +1,50 @@
+Enter query: 
+Parsed input correctly
+Inside copy 2
+
+
+
+
+===========================================
+Query plan: 
+
+-------------------------------------
+Select File Operation Output pipe ID 0 Output Schema:
+c.c_custkey: int	c.c_name: string	c.c_address: string	c.c_nationkey: int	c.c_phone: string	c.c_acctbal: double	c.c_mktsegment: string	c.c_comment: string	
+
+
+-------------------------------------
+
+-------------------------------------
+Select File Operation Output pipe ID 1 Output Schema:
+o.o_orderkey: int	o.o_custkey: int	o.o_orderstatus: string	o.o_totalprice: double	o.o_orderdate: string	o.o_orderpriority: string	o.o_clerk: string	o.o_shippriority: int	o.o_comment: string	
+( Att 3 from left record < Att 0 from literal record (Double)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Join Operation Input pipe ID 0 Input pipe ID 1 Output pipe ID 2 Output Schema:
+c.c_custkey: int	c.c_name: string	c.c_address: string	c.c_nationkey: int	c.c_phone: string	c.c_acctbal: double	c.c_mktsegment: string	c.c_comment: string	o.o_orderkey: int	o.o_custkey: int	o.o_orderstatus: string	o.o_totalprice: double	o.o_orderdate: string	o.o_orderpriority: string	o.o_clerk: string	o.o_shippriority: int	o.o_comment: string	
+Join CNF:
+( Att 0 from left record = Att 1 from right record (Int)) 
+
+
+-------------------------------------
+
+-------------------------------------
+GroupBy Operation Input pipe ID 2 Output pipe ID 3 Output Schema:
+sum: double	c.c_name: string	
+NumAtts =     2
+  0:     0 Double
+  1:     1 String
+
+
+
+-------------------------------------
+
+-------------------------------------
+Project Operation Input pipe ID 3 Output pipe ID 4 Output Schema:
+sum: double	c.c_name: string	
+
+-------------------------------------

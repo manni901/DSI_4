@@ -198,7 +198,7 @@ void CNF :: Print () {
 }
 
 // this is a helper routine that writes out another field for the literal record and its schema
-void AddLitToFile (int &numFieldsInLiteral, FILE *outRecFile, FILE *outSchemaFile, char *value, Type myType) {
+void AddLitToFile (int &numFieldsInLiteral, FILE *outRecFile, FILE *outSchemaFile, const char *value, Type myType) {
 
         // first write out the new record field
         fprintf (outRecFile, "%s|", value);
@@ -425,6 +425,197 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *leftSchema,
 	remove("hkljdfgkSDFSDF");
 }
 
+void CNF :: GrowFromParseTree (ParseVector &parseTree, BitSet &selector, Schema *leftSchema, 
+	Schema *rightSchema, Record &literal) {
+
+	CNF &cnf = *this;
+
+	// as kind of a hack, the literal record is built up insiide of a text file,
+	// where it will be read in from subsequently
+	FILE *outRecFile = fopen ("sdafdsfFFDSDA", "w");
+
+	// also as kind of a hack, the schema for the literal record is built up
+	// inside of a text file, where it will also be read from subsequently
+	FILE *outSchemaFile = fopen ("hkljdfgkSDFSDF", "w");
+	fprintf (outSchemaFile, "BEGIN\ntempSchema\nwherever\n");
+
+	// this tells us the size of the literal record
+	int numFieldsInLiteral = 0;
+
+	// now we go through and build the comparison structure
+	cnf.numAnds = selector.count();
+	int whichAnd = 0;
+	FOREACH_BS(index, selector) {
+		auto& myOr = parseTree[index];
+		cnf.orLens[whichAnd] = myOr.size();
+		for (int whichOr = 0; whichOr < myOr.size(); whichOr++) {			
+			// these store the types of the two values that are found
+			Type typeLeft;
+			Type typeRight;
+
+
+			// first thing is to deal with the left operand
+			// so we check to see if it is an attribute name, and if so,
+			// we look it up in the schema
+			if (myOr[whichOr].left.code == NAME) {
+				
+				// see if we can find this attribute in the left schema
+				if (leftSchema->Find (myOr[whichOr].left.value.c_str()) != -1) {
+					cnf.orList[whichAnd][whichOr].operand1 = Left;
+					cnf.orList[whichAnd][whichOr].whichAtt1 =
+						leftSchema->Find (myOr[whichOr].left.value.c_str());	
+					typeLeft = leftSchema->FindType (myOr[whichOr].left.value.c_str());
+
+				// see if we can find it in the right schema
+				} else if (rightSchema->Find (myOr[whichOr].left.value.c_str()) != -1) {
+                                        cnf.orList[whichAnd][whichOr].operand1 = Right;
+                                        cnf.orList[whichAnd][whichOr].whichAtt1 =
+                                                rightSchema->Find (myOr[whichOr].left.value.c_str());
+                                        typeLeft = rightSchema->FindType (myOr[whichOr].left.value.c_str());
+
+				// it is not there!  So there is an error in the query
+                                } else {
+					cout << "ERROR: Could not find attribute " <<
+						myOr[whichOr].left.value << "\n";
+					exit (1);	
+				}
+
+			// the next thing is to see if we have a string; if so, add it to the 
+			// literal record that stores all of the comparison values
+			} else if (myOr[whichOr].left.code == STRING) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), String);
+				typeLeft = String;
+
+			// see if it is an integer
+			} else if (myOr[whichOr].left.code == INT) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), Int);
+				typeLeft = Int;
+
+			// see if it is a double
+			} else if (myOr[whichOr].left.code == DOUBLE) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), Double);
+				typeLeft = Double;
+	
+			// catch-all case
+			} else {
+				cerr << "You gave me some strange type for an operand that I do not recognize!!\n";
+				exit (1);
+			}
+
+			// now that we have dealt with the left operand, we need to deal with the
+			// right operand
+			if (myOr[whichOr].right.code == NAME) {
+				
+				// see if we can find this attribute in the left schema
+				if (leftSchema->Find (myOr[whichOr].right.value.c_str()) != -1) {
+					cnf.orList[whichAnd][whichOr].operand2 = Left;
+					cnf.orList[whichAnd][whichOr].whichAtt2 =
+						leftSchema->Find (myOr[whichOr].right.value.c_str());	
+					typeRight = leftSchema->FindType (myOr[whichOr].right.value.c_str());
+
+				// see if we can find it in the right schema
+				} else if (rightSchema->Find (myOr[whichOr].right.value.c_str()) != -1) {
+                                        cnf.orList[whichAnd][whichOr].operand2 = Right;
+                                        cnf.orList[whichAnd][whichOr].whichAtt2 =
+                                                rightSchema->Find (myOr[whichOr].right.value.c_str());
+					typeRight = rightSchema->FindType (myOr[whichOr].right.value.c_str());
+
+				// it is not there!  So there is an error in the query
+                                } else {
+					cout << "ERROR: Could not find attribute " << myOr[whichOr].right.value << "\n";
+					exit (1);	
+				}
+
+			// the next thing is to see if we have a string; if so, add it to the 
+			// literal record that stores all of the comparison values
+			} else if (myOr[whichOr].right.code == STRING) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), String);
+				typeRight = String;
+
+			// see if it is an integer
+			} else if (myOr[whichOr].right.code == INT) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), Int);
+				typeRight = Int;
+
+			// see if it is a double
+			} else if (myOr[whichOr].right.code == DOUBLE) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), Double);
+				typeRight = Double;
+	
+			// catch-all case
+			} else {
+				cerr << "You gave me some strange type for an operand that I do not recognize!!\n";
+				exit (1);
+			}
+
+			
+
+			// now we check to make sure that there was not a type mismatch
+			if (typeLeft != typeRight) {
+				cerr << "ERROR! Type mismatch in CNF.  " << myOr[whichOr].left.value << " and "
+					<< myOr[whichOr].right.value << " were found to not match.\n";
+				exit (1);
+			}
+
+			// set up the type info for this comparison
+			cnf.orList[whichAnd][whichOr].attType = typeLeft;
+
+			// and finally set up the comparison operator for this comparison
+			if (myOr[whichOr].code == LESS_THAN) {
+				cnf.orList[whichAnd][whichOr].op = LessThan;	
+			} else if (myOr[whichOr].code == GREATER_THAN) {
+				cnf.orList[whichAnd][whichOr].op = GreaterThan;	
+			} else if (myOr[whichOr].code == EQUALS) {
+				cnf.orList[whichAnd][whichOr].op = Equals;
+			} else {
+				cerr << "BAD: found a comparison op I don't recognize.\n";
+				exit (1);
+			}
+		
+		}
+		whichAnd++;
+	}
+
+	// the very last thing is to set up the literal record; first close the
+	// file where its information has been stored
+	fclose (outRecFile);
+	fprintf (outSchemaFile, "END\n");
+	fclose (outSchemaFile);
+
+	// and open up the record file
+	outRecFile = fopen ("sdafdsfFFDSDA", "r");
+
+	// read in the record's schema
+	Schema mySchema("hkljdfgkSDFSDF", "tempSchema");
+
+	// and get the record
+	literal.SuckNextRecord (&mySchema, outRecFile);
+
+	// close the record file
+	fclose (outRecFile);
+
+	remove("sdafdsfFFDSDA");
+	remove("hkljdfgkSDFSDF");
+}
+
 
 // this is the version that only deals with unary relational selection predicates
 void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema, 
@@ -591,6 +782,183 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 			}
 		
 		}
+	}
+
+	// the very last thing is to set up the literal record; first close the
+	// file where its information has been stored
+	fclose (outRecFile);
+	fprintf (outSchemaFile, "END\n");
+	fclose (outSchemaFile);
+
+	// and open up the record file
+	outRecFile = fopen ("sdafdsfFFDSDA", "r");
+
+	// read in the record's schema
+	Schema outSchema("hkljdfgkSDFSDF", "tempSchema");
+
+	// and get the record
+	literal.SuckNextRecord (&outSchema, outRecFile);
+
+	// close the record file
+	fclose (outRecFile);
+
+	remove("sdafdsfFFDSDA");
+	remove("hkljdfgkSDFSDF");
+}
+
+// this is the version that only deals with unary relational selection predicates
+void CNF :: GrowFromParseTree (ParseVector& parseTree, BitSet &selector, Schema *mySchema, 
+	Record &literal) {
+
+	CNF &cnf = *this;
+
+	// as kind of a hack, the literal record is built up insiide of a text file,
+	// where it will be read in from subsequently
+	FILE *outRecFile = fopen ("sdafdsfFFDSDA", "w");
+
+	// also as kind of a hack, the schema for the literal record is built up
+	// inside of a text file, where it will also be read from subsequently
+	FILE *outSchemaFile = fopen ("hkljdfgkSDFSDF", "w");
+	fprintf (outSchemaFile, "BEGIN\ntempSchema\nwherever\n");
+
+	// this tells us the size of the literal record
+	int numFieldsInLiteral = 0;
+
+	// now we go through and build the comparison structure
+	cnf.numAnds = selector.count();
+	int whichAnd = 0;
+	FOREACH_BS(index, selector) {
+		// we have not, so copy over all of the ORs hanging off of this AND
+		auto& myOr = parseTree[index];
+		cnf.orLens[whichAnd] = myOr.size();
+		for (int whichOr = 0; whichOr < myOr.size(); whichOr++) {			
+			// these store the types of the two values that are found
+			Type typeLeft;
+			Type typeRight;
+
+			// first thing is to deal with the left operand
+			// so we check to see if it is an attribute name, and if so,
+			// we look it up in the schema
+			if (myOr[whichOr].left.code == NAME) {
+				
+				// see if we can find this attribute in the schema
+				if (mySchema->Find (myOr[whichOr].left.value.c_str()) != -1) {
+					cnf.orList[whichAnd][whichOr].operand1 = Left;
+					cnf.orList[whichAnd][whichOr].whichAtt1 =
+						mySchema->Find (myOr[whichOr].left.value.c_str());	
+					typeLeft = mySchema->FindType (myOr[whichOr].left.value.c_str());
+
+				// it is not there!  So there is an error in the query
+                                } else {
+					cout << "ERROR: Could not find attribute " <<
+						myOr[whichOr].left.value << "\n";
+					exit (1);	
+				}
+
+			// the next thing is to see if we have a string; if so, add it to the 
+			// literal record that stores all of the comparison values
+			} else if (myOr[whichOr].left.code == STRING) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), String);
+				typeLeft = String;
+
+			// see if it is an integer
+			} else if (myOr[whichOr].left.code == INT) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), Int);
+				typeLeft = Int;
+
+			// see if it is a double
+			} else if (myOr[whichOr].left.code == DOUBLE) {
+
+				cnf.orList[whichAnd][whichOr].operand1 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt1 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].left.value.c_str(), Double);
+				typeLeft = Double;
+	
+			// catch-all case
+			} else {
+				cerr << "You gave me some strange type for an operand that I do not recognize!!\n";
+				exit (1);
+			}
+
+			// now that we have dealt with the left operand, we need to deal with the
+			// right operand
+			if (myOr[whichOr].right.code == NAME) {
+				
+				// see if we can find this attribute in the left schema
+				if (mySchema->Find (myOr[whichOr].right.value.c_str()) != -1) {
+					cnf.orList[whichAnd][whichOr].operand2 = Left;
+					cnf.orList[whichAnd][whichOr].whichAtt2 =
+						mySchema->Find (myOr[whichOr].right.value.c_str());	
+					typeRight = mySchema->FindType (myOr[whichOr].right.value.c_str());
+
+				// it is not there!  So there is an error in the query
+                                } else {
+					cout << "ERROR: Could not find attribute " << myOr[whichOr].right.value << "\n";
+					exit (1);	
+				}
+
+			// the next thing is to see if we have a string; if so, add it to the 
+			// literal record that stores all of the comparison values
+			} else if (myOr[whichOr].right.code == STRING) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), String);
+				typeRight = String;
+
+			// see if it is an integer
+			} else if (myOr[whichOr].right.code == INT) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), Int);
+				typeRight = Int;
+
+			// see if it is a double
+			} else if (myOr[whichOr].right.code == DOUBLE) {
+
+				cnf.orList[whichAnd][whichOr].operand2 = Literal;
+				cnf.orList[whichAnd][whichOr].whichAtt2 = numFieldsInLiteral;
+				AddLitToFile (numFieldsInLiteral, outRecFile, outSchemaFile, myOr[whichOr].right.value.c_str(), Double);
+				typeRight = Double;
+	
+			// catch-all case
+			} else {
+				cerr << "You gave me some strange type for an operand that I do not recognize!!\n";
+				exit (1);
+			}
+			
+
+			// now we check to make sure that there was not a type mismatch
+			if (typeLeft != typeRight && !(typeLeft == Double && typeRight == Int)) {
+				cerr << "ERROR! Type mismatch in CNF.  " << myOr[whichOr].left.value << " and "
+					<< myOr[whichOr].right.value << " were found to not match.\n";
+				exit (1);
+			}
+
+			// set up the type info for this comparison
+			cnf.orList[whichAnd][whichOr].attType = typeLeft;
+
+			// and finally set up the comparison operator for this comparison
+			if (myOr[whichOr].code == LESS_THAN) {
+				cnf.orList[whichAnd][whichOr].op = LessThan;	
+			} else if (myOr[whichOr].code == GREATER_THAN) {
+				cnf.orList[whichAnd][whichOr].op = GreaterThan;	
+			} else if (myOr[whichOr].code == EQUALS) {
+				cnf.orList[whichAnd][whichOr].op = Equals;
+			} else {
+				cerr << "BAD: found a comparison op I don't recognize.\n";
+				exit (1);
+			}
+		
+		}
+		whichAnd++;
 	}
 
 	// the very last thing is to set up the literal record; first close the

@@ -1,0 +1,57 @@
+Enter query: 
+Parsed input correctly
+
+
+
+
+===========================================
+Query plan: 
+
+-------------------------------------
+Select File Operation Output pipe ID 0 Output Schema:
+c.c_custkey: int	c.c_name: string	c.c_address: string	c.c_nationkey: int	c.c_phone: string	c.c_acctbal: double	c.c_mktsegment: string	c.c_comment: string	
+( Att 1 from left record = Att 0 from literal record (String)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Select File Operation Output pipe ID 1 Output Schema:
+o.o_orderkey: int	o.o_custkey: int	o.o_orderstatus: string	o.o_totalprice: double	o.o_orderdate: string	o.o_orderpriority: string	o.o_clerk: string	o.o_shippriority: int	o.o_comment: string	
+
+
+-------------------------------------
+
+-------------------------------------
+Join Operation Input pipe ID 0 Input pipe ID 1 Output pipe ID 2 Output Schema:
+c.c_custkey: int	c.c_name: string	c.c_address: string	c.c_nationkey: int	c.c_phone: string	c.c_acctbal: double	c.c_mktsegment: string	c.c_comment: string	o.o_orderkey: int	o.o_custkey: int	o.o_orderstatus: string	o.o_totalprice: double	o.o_orderdate: string	o.o_orderpriority: string	o.o_clerk: string	o.o_shippriority: int	o.o_comment: string	
+Join CNF:
+( Att 0 from left record = Att 1 from right record (Int)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Select File Operation Output pipe ID 3 Output Schema:
+l.l_orderkey: int	l.l_partkey: int	l.l_suppkey: int	l.l_linenumber: int	l.l_quantity: double	l.l_extendedprice: double	l.l_discount: double	l.l_tax: double	l.l_returnflag: string	l.l_linestatus: string	l.l_shipdate: string	l.l_commitdate: string	l.l_receiptdate: string	l.l_shipinstruct: string	l.l_shipmode: string	l.l_comment: string	
+( Att 4 from left record > Att 0 from literal record (Double))  AND
+( Att 6 from left record < Att 1 from literal record (Double)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Join Operation Input pipe ID 2 Input pipe ID 3 Output pipe ID 4 Output Schema:
+c.c_custkey: int	c.c_name: string	c.c_address: string	c.c_nationkey: int	c.c_phone: string	c.c_acctbal: double	c.c_mktsegment: string	c.c_comment: string	o.o_orderkey: int	o.o_custkey: int	o.o_orderstatus: string	o.o_totalprice: double	o.o_orderdate: string	o.o_orderpriority: string	o.o_clerk: string	o.o_shippriority: int	o.o_comment: string	l.l_orderkey: int	l.l_partkey: int	l.l_suppkey: int	l.l_linenumber: int	l.l_quantity: double	l.l_extendedprice: double	l.l_discount: double	l.l_tax: double	l.l_returnflag: string	l.l_linestatus: string	l.l_shipdate: string	l.l_commitdate: string	l.l_receiptdate: string	l.l_shipinstruct: string	l.l_shipmode: string	l.l_comment: string	
+Join CNF:
+( Att 8 from left record = Att 0 from right record (Int)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Sum Operation Input pipe ID 4 Output pipe ID 5 Output Schema:
+sum: double	
+
+
+-------------------------------------

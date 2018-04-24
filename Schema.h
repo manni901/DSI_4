@@ -3,6 +3,9 @@
 #define SCHEMA_H
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <iostream>
 #include "Record.h"
 #include "Schema.h"
 #include "File.h"
@@ -23,11 +26,11 @@ class OrderMaker;
 class Schema {
 
 	// gives the attributes in the schema
-	int numAtts;
+	int numAtts = 0;
 	Attribute *myAtts;
 
 	// gives the physical location of the binary file storing the relation
-	char *fileName;
+	string fileName;
 
 	friend class Record;
 
@@ -42,20 +45,68 @@ public:
 
 	// this finds the position of the specified attribute in the schema
 	// returns a -1 if the attribute is not present in the schema
-	int Find (char *attName);
+	int Find (const char *attName);
 
 	// this finds the type of the given attribute
-	Type FindType (char *attName);
+	Type FindType (const char *attName);
 
 	// this reads the specification for the schema in from a file
-	Schema (char *fName, char *relName);
+	Schema (string fName, string relName, string alias = "");
 
 	// this composes a schema instance in-memory
-	Schema (char *fName, int num_atts, Attribute *atts);
+	Schema (string fName, int num_atts, Attribute *atts);
 
 	// this constructs a sort order structure that can be used to
 	// place a lexicographic ordering on the records using this type of schema
 	int GetSortOrder (OrderMaker &order);
+
+	Schema(Schema *copy) {
+		numAtts = copy->numAtts;
+		myAtts = new Attribute[numAtts];
+
+		for (int i = 0; i < copy->numAtts; i++) {
+			myAtts[i].name = strdup(copy->myAtts[i].name);
+			myAtts[i].myType = copy->myAtts[i].myType;
+		}
+
+		fileName = copy->fileName;
+	}
+
+	Schema (Schema *left, Schema *right) {
+		numAtts = left->numAtts + right->numAtts;
+		myAtts = new Attribute[numAtts];
+
+		for (int i = 0; i < left->numAtts; i++) {
+			myAtts[i].name = strdup(left->myAtts[i].name);
+			myAtts[i].myType = left->myAtts[i].myType;
+		}
+
+		for (int i = 0; i < right->numAtts; i++) {
+			myAtts[i + left->numAtts].name = strdup(right->myAtts[i].name);
+			myAtts[i + left->numAtts].myType = right->myAtts[i].myType;
+		}
+	}
+
+	void Print() {
+		cout << "Output Schema:\n";
+		for (int i = 0; i < numAtts; i++) {
+			string typ;
+			switch(myAtts[i].myType) {
+				case Int:
+					typ = "int";
+					break;
+				case String:
+					typ = "string";
+					break;
+				case Double:
+					typ = "double";
+					break;
+				default:
+					break;
+			}
+			cout << myAtts[i].name << ": " << typ << "\t";
+		}
+	}
 
 	~Schema ();
 

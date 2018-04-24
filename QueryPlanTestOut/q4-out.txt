@@ -1,0 +1,43 @@
+Enter query: 
+Parsed input correctly
+
+
+
+
+===========================================
+Query plan: 
+
+-------------------------------------
+Select File Operation Output pipe ID 0 Output Schema:
+c1.c_custkey: int	c1.c_name: string	c1.c_address: string	c1.c_nationkey: int	c1.c_phone: string	c1.c_acctbal: double	c1.c_mktsegment: string	c1.c_comment: string	
+( Att 1 from left record = Att 0 from literal record (String)) 
+
+
+-------------------------------------
+
+-------------------------------------
+Select File Operation Output pipe ID 1 Output Schema:
+c1.c_custkey: int	c1.c_name: string	c1.c_address: string	c1.c_nationkey: int	c1.c_phone: string	c1.c_acctbal: double	c1.c_mktsegment: string	c1.c_comment: string	
+
+
+-------------------------------------
+
+-------------------------------------
+Join Operation Input pipe ID 0 Input pipe ID 1 Output pipe ID 2 Output Schema:
+c1.c_custkey: int	c1.c_name: string	c1.c_address: string	c1.c_nationkey: int	c1.c_phone: string	c1.c_acctbal: double	c1.c_mktsegment: string	c1.c_comment: string	c1.c_custkey: int	c1.c_name: string	c1.c_address: string	c1.c_nationkey: int	c1.c_phone: string	c1.c_acctbal: double	c1.c_mktsegment: string	c1.c_comment: string	
+Join CNF:
+
+
+-------------------------------------
+
+-------------------------------------
+Project Operation Input pipe ID 2 Output pipe ID 3 Output Schema:
+c1.c_name: string	c1.c_address: string	c1.c_acctbal: double	c1.c_name: string	c1.c_address: string	c1.c_acctbal: double	
+
+-------------------------------------
+
+-------------------------------------
+Duplicate Removal Operation Input pipe ID 3 Output pipe ID 4 Output Schema:
+c1.c_name: string	c1.c_address: string	c1.c_acctbal: double	c1.c_name: string	c1.c_address: string	c1.c_acctbal: double	
+
+-------------------------------------

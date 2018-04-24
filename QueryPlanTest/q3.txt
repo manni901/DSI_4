@@ -1,0 +1,4 @@
+SELECT l.l_orderkey, l.l_partkey, l.l_suppkey 
+FROM lineitem AS l 
+WHERE (l.l_returnflag = 'R') AND 
+      (l.l_discount < 0.04 OR l.l_shipmode = 'MAIL')

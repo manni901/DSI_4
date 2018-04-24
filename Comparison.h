@@ -1,14 +1,14 @@
 #ifndef COMPARISON_H
 #define COMPARISON_H
 
-#include <fstream>
-#include <iostream>
-#include <vector>
 #include "Comparison.h"
 #include "ComparisonEngine.h"
 #include "File.h"
 #include "Record.h"
 #include "Schema.h"
+#include <fstream>
+#include <iostream>
+#include <vector>
 
 // This stores an individual comparison that is part of a CNF
 class Comparison {
@@ -47,8 +47,8 @@ class OrderMaker {
 
   // Operator overload to read and write the order maker members numAtts,
   // whichAtts and whichTypes to file.
-  friend std::ostream& operator<<(std::ostream& os, const OrderMaker& myorder);
-  friend std::istream& operator>>(std::istream& is, OrderMaker& myorder);
+  friend std::ostream &operator<<(std::ostream &os, const OrderMaker &myorder);
+  friend std::istream &operator>>(std::istream &is, OrderMaker &myorder);
 
   int numAtts;
 
@@ -60,8 +60,7 @@ public:
   OrderMaker();
   OrderMaker(const OrderMaker &other) { Copy(other); }
 
-
-  OrderMaker &operator=(const OrderMaker &other) { 
+  OrderMaker &operator=(const OrderMaker &other) {
     Copy(other);
     return *this;
   }
@@ -83,7 +82,7 @@ public:
                        CNF &cnf);
 
   void GetAtts(std::vector<int> &atts_to_keep) {
-    for(int i = 0; i < numAtts; i++) {
+    for (int i = 0; i < numAtts; i++) {
       atts_to_keep.push_back(whichAtts[i]);
     }
   }
@@ -91,7 +90,6 @@ public:
 private:
   void Copy(const OrderMaker &other) {
     numAtts = other.numAtts;
-	std::cout << "Inside copy " << other.numAtts << "\n";
     for (int i = 0; i < numAtts; ++i) {
       whichAtts[i] = other.whichAtts[i];
       whichTypes[i] = other.whichTypes[i];
@@ -134,6 +132,13 @@ public:
   // version of the same function, except that it is used in the case of
   // a relational selection over a single relation so only one schema is used
   void GrowFromParseTree(struct AndList *parseTree, Schema *mySchema,
+                         Record &literal);
+
+  void GrowFromParseTree(ParseVector &parse_vector, BitSet &selector,
+                         Schema *mySchema, Record &literal);
+
+  void GrowFromParseTree(ParseVector &parse_vector, BitSet &selector,
+                         Schema *leftSchema, Schema *rightSchema,
                          Record &literal);
 };
 

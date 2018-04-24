@@ -11,7 +11,7 @@ extern "C" {
 	int yyparse(void);   // defined in y.tab.c
 }
 
-extern struct AndList *final;
+extern struct AndList *boolean;
 
 class relation {
 
@@ -40,7 +40,7 @@ public:
 			std::cout << "Can't parse your CNF.\n";
 			exit (1);
 		}
-		cnf_pred.GrowFromParseTree (final, schema (), literal); // constructs CNF predicate
+		cnf_pred.GrowFromParseTree (boolean, schema (), literal); // constructs CNF predicate
 	}
 };
 

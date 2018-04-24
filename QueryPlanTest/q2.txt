@@ -1,0 +1,4 @@
+SELECT SUM (c.c_acctbal),c.c_name 
+FROM customer AS c, orders AS o 
+WHERE (c.c_custkey = o.o_custkey) AND (o.o_totalprice < 10000) 
+GROUP BY c.c_name
