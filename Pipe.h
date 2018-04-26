@@ -31,9 +31,7 @@ public:
 
 	// this sets up the pipeline; the parameter is the number of
 	// records to buffer
-	Pipe () {
-		Pipe(PIPE_BUFFER_SIZE);
-	}
+	Pipe () : Pipe(PIPE_BUFFER_SIZE) {}
 	Pipe (int bufferSize);	
 	virtual ~Pipe();
 

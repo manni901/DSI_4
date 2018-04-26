@@ -10,12 +10,13 @@ BigQ::BigQ(Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
     // read data from in pipe sort them into runlen pages
     srand (time(NULL));
     long long int file_name = rand() % LONG_MAX;
+    string filename;
     mutex_.lock();
     while (!filenames_.insert(rand() % LONG_MAX).second) {
       file_name = rand() % LONG_MAX;
     }
-    const char *filename = to_string(file_name).c_str();
-    file_.Open(0, filename);
+    filename = to_string(file_name);
+    file_.Open(0, filename.c_str());
     mutex_.unlock();
 
     Record rec;
@@ -44,9 +45,9 @@ BigQ::BigQ(Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
     MergeRuns(sortorder, out);
 
     file_.Close();
+    remove(filename.c_str());
 
     mutex_.lock();
-    remove(filename);
     filenames_.erase(file_name);
     mutex_.unlock();
 

@@ -5,7 +5,7 @@
 // make sure that the file path/dir information below is correct
 const char *dbfile_dir = ""; // dir where binary heap files should be stored
 const char *tpch_dir ="../dbgen/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
-char *catalog_path = "catalog"; // full path of the catalog file
+char *catalog_path = catalog; // full path of the catalog file
 
 using namespace std;
 

@@ -39,14 +39,17 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 		if (parseTree->leftOperand->code == NAME) {
 
 			// first, make sure that the attribute is there
-			int myNum = mySchema.Find (parseTree->leftOperand->value);
+
+			std::string val = parseTree->leftOperand->value;
+			int myNum = mySchema.Find (val);
 			if (myNum == -1) {
 				cerr << "Error!  Attribute in arithmatic expression was not found.\n";
 				exit (1);
 			}
 
 			// it is there, so get the type
-			int myType = mySchema.FindType (parseTree->leftOperand->value);
+			val = parseTree->leftOperand->value;
+			int myType = mySchema.FindType (val);
 
 			// see if it is a string
 			if (myType == String) {

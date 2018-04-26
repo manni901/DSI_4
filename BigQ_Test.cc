@@ -20,7 +20,7 @@ TEST(BigQTest, SimpleSortTest) {
   const char *file_path = "10M/lineitem.tbl";
   const char *table_bin_path = "lineitem-test.bin";
   // suck up the schema from the file
-  Schema lineitem("catalog", "lineitem");
+  Schema lineitem(catalog, "lineitem");
 
   // To parse from string instead of stdin
   // (https://lists.gnu.org/archive/html/help-bison/2006-01/msg00054.html)

@@ -1,10 +1,9 @@
 #include "Schema.h"
 #include <fstream>
 
-int Schema :: Find (const char *attName) {
-
+int Schema :: Find (string &attName) {
 	for (int i = 0; i < numAtts; i++) {
-		if (!strcmp (attName, myAtts[i].name)) {
+		if (attName == myAtts[i].name) {
 			return i;
 		}
 	}
@@ -13,10 +12,9 @@ int Schema :: Find (const char *attName) {
 	return -1;
 }
 
-Type Schema :: FindType (const char *attName) {
-
+Type Schema :: FindType (string &attName) {
 	for (int i = 0; i < numAtts; i++) {
-		if (!strcmp (attName, myAtts[i].name)) {
+		if (attName == myAtts[i].name) {
 			return myAtts[i].myType;
 		}
 	}
@@ -30,31 +28,14 @@ int Schema :: GetNumAtts () {
 }
 
 Attribute *Schema :: GetAtts () {
-	return myAtts;
+	return myAtts.data();
 }
 
 
-Schema :: Schema (string fpath, int num_atts, Attribute *atts) {
+Schema :: Schema (string fpath, int num_atts, std::vector<Attribute>& atts) {
 	fileName = fpath;
 	numAtts = num_atts;
-	myAtts = new Attribute[numAtts];
-	for (int i = 0; i < numAtts; i++ ) {
-		if (atts[i].myType == Int) {
-			myAtts[i].myType = Int;
-		}
-		else if (atts[i].myType == Double) {
-			myAtts[i].myType = Double;
-		}
-		else if (atts[i].myType == String) {
-			myAtts[i].myType = String;
-		} 
-		else {
-			cout << "Bad attribute type for " << atts[i].myType << "\n";
-			delete [] myAtts;
-			exit (1);
-		}
-		myAtts[i].name = strdup (atts[i].name);
-	}
+	myAtts = move(atts);
 }
 
 Schema :: Schema (string fName, string relName, string alias) {
@@ -127,13 +108,13 @@ Schema :: Schema (string fName, string relName, string alias) {
 	}
 
 	// and load up the schema
-	myAtts = new Attribute[numAtts];
+	myAtts.resize(numAtts);
 	for (int i = 0; i < numAtts; i++ ) {
 
 		// read in the attribute name
 		foo >> space;
-		string n = alias + "." + space;
-		myAtts[i].name = strdup(n.c_str()); //strdup (space);
+		string n = alias == "" ? space : (alias + "." + space);
+		myAtts[i].name = n; //strdup (space);
 
 		// read in the attribute type
 		foo >> space;
@@ -150,10 +131,5 @@ Schema :: Schema (string fName, string relName, string alias) {
 	}
 
 	foo.close();
-}
-
-Schema :: ~Schema () {
-	delete [] myAtts;
-	myAtts = 0;
 }
 

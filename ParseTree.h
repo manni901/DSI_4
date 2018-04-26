@@ -97,4 +97,10 @@ struct AndList {
 
 };
 
+struct TableSchema {
+        char *att_name;
+        int att_type;
+        struct TableSchema *next;
+};
+
 #endif

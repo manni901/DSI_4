@@ -5,10 +5,12 @@
 #include "Function.h"
 #include "Record.h"
 #include "Schema.h"
+#include "RelOp.h"
 #include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <unordered_map>
 using namespace std;
 
 #define QueryNodeP unique_ptr<QueryNode>
@@ -19,6 +21,8 @@ public:
       : schema_(move(schema)), out_pipe_id_(out_pipe_id) {}
 
   QueryNode(int out_pipe_id) : out_pipe_id_(out_pipe_id) {}
+
+  ~QueryNode() = default;
 
   // Get Out pipe id.
   int OutPipeId() { return out_pipe_id_; }
@@ -36,12 +40,36 @@ public:
     cout << "\n-------------------------------------\n";
   }
 
+  void ExecuteNode() {
+    for (auto &child : children_) {
+      child->ExecuteNode();
+    }
+    Execute();
+  }
+
+  void FinishNode() {
+    Finish();
+    for (auto &child : children_) {
+      child->FinishNode();
+    }
+  }
+
   // Overridden by every derived class.
   virtual void Print() = 0;
+
+  void Execute() {
+    rel_op_->Run();
+  };
+
+  void Finish() {
+    rel_op_->WaitUntilDone();
+  }
 
 protected:
   // smart pointer to store schema
   unique_ptr<Schema> schema_;
+
+  unique_ptr<RelationalOp> rel_op_;
 
   // output pipe_id.
   int out_pipe_id_;
@@ -57,8 +85,9 @@ private:
 
 public:
   SelectPipeNode(ParseVector &parse_vector, BitSet &selector,
-                 unique_ptr<Schema> schema, QueryNodeP input_node, int pipe_id);
+                 unique_ptr<Schema> schema, QueryNodeP input_node, int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 class ProjectNode : public QueryNode {
@@ -67,8 +96,9 @@ private:
 
 public:
   ProjectNode(QueryNodeP input_node, unordered_set<string> &att_names,
-              int pipe_id);
+              int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 class DuplicateRemovalNode : public QueryNode {
@@ -76,18 +106,25 @@ private:
   int in_pipe_id_;
 
 public:
-  DuplicateRemovalNode(QueryNodeP input_node, int pipe_id);
+  DuplicateRemovalNode(QueryNodeP input_node, int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 class SelectFileNode : public QueryNode {
 private:
   CNF cnf_;
+  DBFile db_file_;
 
 public:
-  SelectFileNode(ParseVector &parse_vector, BitSet &selector,
-                 unique_ptr<Schema> schema, int pipe_id);
+  SelectFileNode(ParseVector &parse_vector, BitSet &selector, string table_name,
+                 unique_ptr<Schema> schema, int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
+
+  ~SelectFileNode() {
+    db_file_.Close();
+  }
 };
 
 class JoinNode : public QueryNode {
@@ -99,8 +136,9 @@ private:
 public:
   JoinNode(ParseVector &parse_vector, BitSet &selector,
            unique_ptr<Schema> schema, QueryNodeP left, QueryNodeP right,
-           int out_pipe_id);
+           int out_pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 class GroupByNode : public QueryNode {
@@ -111,8 +149,9 @@ private:
 
 public:
   GroupByNode(QueryNodeP input_node, unordered_set<string> &grouping_atts,
-              FuncOperator *func, int pipe_id);
+              FuncOperator *func, int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 class SumNode : public QueryNode {
@@ -121,8 +160,9 @@ private:
   int in_pipe_id_;
 
 public:
-  SumNode(QueryNodeP input_node, FuncOperator *func, int pipe_id);
+  SumNode(QueryNodeP input_node, FuncOperator *func, int pipe_id, PMap<Pipe> &pipes);
   void Print();
+  void Execute();
 };
 
 #endif

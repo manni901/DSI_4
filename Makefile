@@ -1,4 +1,4 @@
-CC = g++ -O3 -std=c++14
+CC = g++-5 -O3 -std=c++14
 #-Wno-deprecated -ggdb -std=c++14 
 
 # Points to the root of Google Test, relative to where this file is.
@@ -58,31 +58,28 @@ tag = -n
 endif
 
 a41.out: Statistics.o y.tab.o lex.yy.o test4-1.o
-	$(CC) -o a41.out Statistics.o y.tab.o lex.yy.o test4-1.o -lfl
+	$(CC) -o a41.out Statistics.o y.tab.o lex.yy.o test4-1.o -ll
 
 a3.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test3.o
-	$(CC) -o a3.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test3.o -lfl -lpthread
+	$(CC) -o a3.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test3.o -ll -lpthread
 
 a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-2.o
-	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-2.o -lfl -lpthread
+	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-2.o -ll -lpthread
 
 a21.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-1.o
-	$(CC) -o a21.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-1.o -lfl -lpthread
+	$(CC) -o a21.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test2-1.o -ll -lpthread
 
 test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test.o
-	$(CC) $^ -o $@ -lfl -lpthread
+	$(CC) $^ -o $@ -ll -lpthread
 	
-main: Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o
-	$(CC) -o main Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o -lfl
-
 HeapFile_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o y.tab.o lex.yy.o HeapFile.o SortedFile.o Pipe.o HeapFile_Test.o gtest_main.a
 	$(CC) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 BigQ_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o y.tab.o lex.yy.o HeapFile.o SortedFile.o Pipe.o BigQ_Test.o gtest_main.a
 	$(CC) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
-QueryNode_Test: Record.o Comparison.o ComparisonEngine.o Schema.o Function.o Statistics.o y.tab.o lex.yy.o QueryNode.o QueryPlan.o QueryNodeTest.o
-	$(CC) $^ -o $@ -lfl	
+DBEngine: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o Statistics.o y.tab.o lex.yy.o QueryNode.o QueryPlan.o TableOperation.o main.o
+	$(CC) $^ -o $@ -ll -lpthread
 
 test4-1.o: test4-1.cc
 	$(CC) -g -c test4-1.cc
@@ -129,14 +126,14 @@ HeapFile_Test.o : HeapFile_Test.cc
 BigQ_Test.o : BigQ_Test.cc
 	$(CC) $(CPPFLAGS) $(CXXFLAGS) -c BigQ_Test.cc
 
-QueryNodeTest.o: QueryNodeTest.cc
-	$(CC) -c QueryNodeTest.cc
-
 QueryPlan.o: QueryPlan.cc
 	$(CC) -c QueryPlan.cc
 
 QueryNode.o: QueryNode.cc
 	$(CC) -c QueryNode.cc
+
+TableOperation.o: TableOperation.cc
+	$(CC) -c TableOperation.cc
 
 File.o: File.cc
 	$(CC) -g -c File.cc
@@ -159,7 +156,7 @@ Statistics.o: Statistics.cc
 y.tab.o: Parser.y
 	yacc -d Parser.y
 	#sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
-	g++ -c y.tab.c
+	g++-5 -std=c++14 -c y.tab.c
 
 yyfunc.tab.o: ParserFunc.y
 	yacc -p "yyfunc" -b "yyfunc" -d ParserFunc.y

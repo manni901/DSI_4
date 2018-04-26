@@ -12,8 +12,7 @@
 #include "Schema.h"
 #include "TwoWayList.h"
 #include "DBFileInternal.h"
-
-typedef enum { heap, sorted, tree } fType;
+#include "Defs.h"
 
 // stub DBFile header..replace it with your own DBFile.h
 
@@ -23,7 +22,7 @@ public:
   DBFile() = default;
   ~DBFile() = default;
 
-  int Create(const char *fpath, fType file_type, void *startup);
+  int Create(const char *fpath, fType file_type, void *startup = NULL);
   int Open(const char *fpath);
   int Close();
 

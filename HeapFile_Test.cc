@@ -25,7 +25,7 @@ TEST(HeapFileTest, LoadCountTest) {
   dbfile.Create (table_bin_path, heap, NULL);
 
   // suck up the schema from the file
-  Schema lineitem ("catalog", "lineitem");
+  Schema lineitem (catalog, "lineitem");
 
   dbfile.Load (lineitem, file_path);
   dbfile.Close ();
@@ -51,7 +51,7 @@ TEST(HeapFileTest, CNFTest) {
   const char* file_path = "10M/nation.tbl";
   const char* table_bin_path = "nation-test.bin";
   // suck up the schema from the file
-  Schema nation ("catalog", "nation");
+  Schema nation (catalog, "nation");
   
   // To parse from string instead of stdin
   // (https://lists.gnu.org/archive/html/help-bison/2006-01/msg00054.html)

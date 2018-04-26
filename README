@@ -9,6 +9,12 @@ For a look at the code I have added the following files:
 - ParseUtil.h
 - QueryNodeTest.cc
 
+Note: To get the statistics and catalog, I have used two files:
+- Statistics.txt
+- catalog
+
+If you have your own version of these files, the path will need to be changed in Defs.h 
+
 To run various queries, I have taken 10 query plan queries from project 5 files.
 In the folder QueryPlanTest/ you will find 10 files q[1-10].txt each with a single query.
 To run the test please run the following shell script:

@@ -23,6 +23,9 @@
         "iosfwd": "cpp",
         "__split_buffer": "cpp",
         "list": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "locale": "cpp",
+        "__hash_table": "cpp",
+        "unordered_map": "cpp"
     }
 }

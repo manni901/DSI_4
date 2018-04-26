@@ -12,7 +12,7 @@ using namespace std;
 
 // make sure that the information below is correct
 
-char *catalog_path = "catalog"; 
+char *catalog_path = catalog; 
 char *dbfile_dir = ""; 
 char *tpch_dir ="../dbgen/1G/"; 
 

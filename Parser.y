@@ -1,11 +1,13 @@
  
 %{
 
-	#include "ParseTree.h" 
+	#include "ParseTree.h"
 	#include <stdio.h>
 	#include <string.h>
 	#include <stdlib.h>
 	#include <iostream>
+	#include <vector>
+	#include <unordered_set>
 
 	extern "C" int yylex();
 	extern "C" int yyparse();
@@ -13,12 +15,20 @@
   
 	// these data structures hold the result of the parsing
 	struct FuncOperator *finalFunction; // the aggregate function (NULL if no agg)
-	struct TableList *tables; // the list of tables and aliases in the query
+	std::vector<std::pair<std::string, std::string>> tables; // the list of tables and aliases in the query
 	struct AndList *boolean; // the predicate in the WHERE clause
-	struct NameList *groupingAtts; // grouping atts (NULL if no grouping)
-	struct NameList *attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
+	std::unordered_set<std::string> groupingAtts; // grouping atts (NULL if no grouping)
+	std::unordered_set<std::string> attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
 	int distinctAtts; // 1 if there is a DISTINCT in a non-aggregate query 
 	int distinctFunc;  // 1 if there is a DISTINCT in an aggregate query
+	std::string mytable; // table name for create table.
+	int query_type;
+	std::vector<std::pair<std::string, int>> modern_schema;
+	int db_file_type;
+	std::vector<std::string> sort_atts;
+	std::string insert_file_name;
+	std::string output_file;
+	int output_mode;
 
 %}
 
@@ -26,20 +36,21 @@
 %union {
  	struct FuncOperand *myOperand;
 	struct FuncOperator *myOperator; 
-	struct TableList *myTables;
 	struct ComparisonOp *myComparison;
 	struct Operand *myBoolOperand;
 	struct OrList *myOrList;
 	struct AndList *myAndList;
-	struct NameList *myNames;
 	char *actualChars;
 	char whichOne;
+	int atttype;
 }
+
+
 
 %token <actualChars> Name
 %token <actualChars> Float
-%token <actualChars> Int
-%token <actualChars> String
+%token <actualChars> Inti
+%token <actualChars> Stringg
 %token SELECT
 %token GROUP 
 %token DISTINCT
@@ -50,6 +61,22 @@
 %token AS
 %token AND
 %token OR
+%token CREATE
+%token TABLE
+%token INSERT
+%token INTO
+%token DROP
+%token EXIT
+%token SORTED
+%token HEAP
+%token ON
+%token INTEGERR
+%token DOUBLEE
+%token STRINGG
+%token SET
+%token OUTPUT
+%token NONE
+%token STDOUT
 
 %type <myOrList> OrList
 %type <myAndList> AndList
@@ -58,9 +85,8 @@
 %type <whichOne> Op 
 %type <myComparison> BoolComp
 %type <myComparison> Condition
-%type <myTables> Tables
 %type <myBoolOperand> Literal
-%type <myNames> Atts
+%type <atttype> Typ
 
 %start SQL
 
@@ -74,43 +100,101 @@
 
 %%
 
-SQL: SELECT WhatIWant FROM Tables WHERE AndList
+SQL: SELECT WhatIWant FROM Tables WHERE AndList ';'
 {
-	tables = $4;
+	query_type = 0;
 	boolean = $6;	
-	groupingAtts = NULL;
+	YYACCEPT;
 }
 
-| SELECT WhatIWant FROM Tables WHERE AndList GROUP BY Atts
+| SELECT WhatIWant FROM Tables WHERE AndList GROUP BY GroupAtts ';'
 {
-	tables = $4;
+	query_type = 0;
 	boolean = $6;	
-	groupingAtts = $9;
+	YYACCEPT;
+}
+
+| CREATE TABLE Name '(' AttPair ')' AS TableType ';'
+{
+	query_type = 1;
+	mytable = $3;
+	YYACCEPT;
+}
+| INSERT File INTO Name ';'
+{
+	query_type = 2;
+	mytable = $4;
+	YYACCEPT;
+}
+| DROP TABLE Name ';'
+{
+	query_type = 3;
+	mytable = $3;
+	YYACCEPT;
+}
+| SET OUTPUT Output ';'
+{
+	query_type = 5;
+	YYACCEPT;
+}
+| EXIT ';'
+{
+	query_type = 4;
+	YYACCEPT;
+}
+;
+
+File: Stringg
+{
+	insert_file_name = $1;
+}
+| Name
+{
+	insert_file_name = $1;
+}
+
+Output: STDOUT
+{
+	output_mode = 1;
+}
+| NONE
+{
+	output_mode = 0;
+}
+| Name
+{
+	output_mode = 2;
+	output_file = $1;
+}
+
+TableType: HEAP
+{
+	db_file_type = 0;
+} 
+| SORTED ON SortAtts
+{
+	db_file_type = 1;
 };
 
 WhatIWant: Function ',' Atts 
 {
-	attsToSelect = $3;
 	distinctAtts = 0;
 }
 
 | Function
 {
-	attsToSelect = NULL;
+	distinctAtts = 0;
 }
 
 | Atts 
 {
 	distinctAtts = 0;
 	finalFunction = NULL;
-	attsToSelect = $1;
 }
 
 | DISTINCT Atts
 {
 	distinctAtts = 1;
-	finalFunction = NULL;
-	attsToSelect = $2;
 	finalFunction = NULL;
 };
 
@@ -126,34 +210,68 @@ Function: SUM '(' CompoundExp ')'
 	finalFunction = $4;
 };
 
+AttPair: Name Typ
+{
+	modern_schema.emplace_back($1, $2);
+}
+| AttPair ',' Name Typ
+{
+	modern_schema.emplace_back($3, $4);
+}
+;
+
+Typ: INTEGERR
+{
+	$$ = 0;
+}
+| DOUBLEE
+{
+	$$ = 1;
+}
+| STRINGG
+{
+	$$ = 2;
+}
+;
+
+GroupAtts: Name
+{
+	groupingAtts.insert($1);
+} 
+
+| GroupAtts ',' Name
+{
+	groupingAtts.insert($3);
+};
+
+SortAtts: Name
+{
+	sort_atts.push_back($1);
+} 
+
+| SortAtts ',' Name
+{
+	sort_atts.push_back($3);
+};
+
 Atts: Name
 {
-	$$ = (struct NameList *) malloc (sizeof (struct NameList));
-	$$->name = $1;
-	$$->next = NULL;
+	attsToSelect.insert($1);
 } 
 
 | Atts ',' Name
 {
-	$$ = (struct NameList *) malloc (sizeof (struct NameList));
-	$$->name = $3;
-	$$->next = $1;
-}
+	attsToSelect.insert($3);
+};
 
 Tables: Name AS Name 
 {
-	$$ = (struct TableList *) malloc (sizeof (struct TableList));
-	$$->tableName = $1;
-	$$->aliasAs = $3;
-	$$->next = NULL;
+	tables.emplace_back($1, $3);
 }
 
 | Tables ',' Name AS Name
 {
-	$$ = (struct TableList *) malloc (sizeof (struct TableList));
-	$$->tableName = $3;
-	$$->aliasAs = $5;
-	$$->next = $1;
+	tables.emplace_back($3, $5);
 }
 
 
@@ -299,7 +417,7 @@ BoolComp: '<'
 }
 ;
 
-Literal : String
+Literal : Stringg
 {
         // construct and send up the operand containing the string
         $$ = (struct Operand *) malloc (sizeof (struct Operand));
@@ -315,7 +433,7 @@ Literal : String
         $$->value = $1;
 }
 
-| Int
+| Inti
 {
         // construct and send up the operand containing the integer
         $$ = (struct Operand *) malloc (sizeof (struct Operand));
@@ -343,7 +461,7 @@ Float
         $$->value = $1;
 } 
 
-| Int
+| Inti
 {
         // construct and send up the operand containing the integer
         $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));

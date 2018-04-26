@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
+#include <vector>
 #include "Record.h"
 #include "Schema.h"
 #include "File.h"
@@ -18,7 +20,7 @@ struct att_pair {
 };
 struct Attribute {
 
-	char *name;
+	std::string name;
 	Type myType;
 };
 
@@ -27,7 +29,7 @@ class Schema {
 
 	// gives the attributes in the schema
 	int numAtts = 0;
-	Attribute *myAtts;
+	std::vector<Attribute> myAtts;
 
 	// gives the physical location of the binary file storing the relation
 	string fileName;
@@ -45,16 +47,16 @@ public:
 
 	// this finds the position of the specified attribute in the schema
 	// returns a -1 if the attribute is not present in the schema
-	int Find (const char *attName);
+	int Find (string& attName);
 
 	// this finds the type of the given attribute
-	Type FindType (const char *attName);
+	Type FindType (string& attName);
 
 	// this reads the specification for the schema in from a file
 	Schema (string fName, string relName, string alias = "");
 
 	// this composes a schema instance in-memory
-	Schema (string fName, int num_atts, Attribute *atts);
+	Schema (string fName, int num_atts, std::vector<Attribute>& atts);
 
 	// this constructs a sort order structure that can be used to
 	// place a lexicographic ordering on the records using this type of schema
@@ -62,53 +64,51 @@ public:
 
 	Schema(Schema *copy) {
 		numAtts = copy->numAtts;
-		myAtts = new Attribute[numAtts];
-
-		for (int i = 0; i < copy->numAtts; i++) {
-			myAtts[i].name = strdup(copy->myAtts[i].name);
-			myAtts[i].myType = copy->myAtts[i].myType;
-		}
-
+		myAtts = copy->myAtts;
 		fileName = copy->fileName;
 	}
 
 	Schema (Schema *left, Schema *right) {
 		numAtts = left->numAtts + right->numAtts;
-		myAtts = new Attribute[numAtts];
-
-		for (int i = 0; i < left->numAtts; i++) {
-			myAtts[i].name = strdup(left->myAtts[i].name);
-			myAtts[i].myType = left->myAtts[i].myType;
-		}
-
-		for (int i = 0; i < right->numAtts; i++) {
-			myAtts[i + left->numAtts].name = strdup(right->myAtts[i].name);
-			myAtts[i + left->numAtts].myType = right->myAtts[i].myType;
-		}
+		myAtts = left->myAtts;
+		myAtts.insert(myAtts.end(), right->myAtts.begin(), right->myAtts.end());
 	}
 
-	void Print() {
-		cout << "Output Schema:\n";
+	string ToString() {
+		string ans = "";
 		for (int i = 0; i < numAtts; i++) {
 			string typ;
 			switch(myAtts[i].myType) {
 				case Int:
-					typ = "int";
+					typ = "Int";
 					break;
 				case String:
-					typ = "string";
+					typ = "String";
 					break;
 				case Double:
-					typ = "double";
+					typ = "Double";
 					break;
 				default:
 					break;
 			}
-			cout << myAtts[i].name << ": " << typ << "\t";
+			ans += myAtts[i].name + " " + typ + "\n";
 		}
+		return ans;
 	}
 
-	~Schema ();
+	void Print() {
+		cout << "Output Schema:\n";
+		cout << ToString();
+	}
+
+	void WriteToCatalog(string catalog_file) {
+		std::ofstream out(catalog_file, std::ofstream::out | std::ofstream::app);
+		out << "\n" << "BEGIN" << "\n" << fileName << "\n" << fileName + ".tbl" << "\n";
+		out << ToString();
+		out << "END\n";
+	}
+
+	~Schema () = default;
 
 };
 

@@ -4,29 +4,66 @@
 #include "ParseTree.h"
 #include "QueryNode.h"
 #include "Statistics.h"
+#include <ostream>
+#include "Pipe.h"
+#include "Defs.h"
 #include <algorithm>
 #include <climits>
 #include <memory>
 #include <vector>
+#include <unordered_set>
+#include <thread>
 using namespace std;
 
 // Following variables are defined in Parser.y
 extern struct FuncOperator *finalFunction;
-extern struct TableList *tables;
+extern vector<pair<string, string>> tables;
 extern struct AndList *boolean;
-extern struct NameList *groupingAtts;
-extern struct NameList *attsToSelect;
+extern unordered_set<string> groupingAtts;
+extern unordered_set<string> attsToSelect;
 extern int distinctAtts;
 extern int distinctFunc;
+extern string output_file;
+extern int output_mode;
 
 class QueryPlan {
 public:
   QueryPlan(string stat_file);
+  ~QueryPlan() = default;
 
   // Prints the entire query plan recursively in in-order fashion.
   void Print() { root_node_->PrintNode(); }
 
+  void Execute() { 
+    root_node_->ExecuteNode();
+    thread_ = thread([this](){
+      Schema *schema = root_node_->GetSchema();
+      int out_pipe_id = root_node_->OutPipeId();
+      Record rec;
+      int num_records = 0;
+      ostream& out = GetOutMode();
+      while(pipes_[out_pipe_id]->Remove(&rec)) {
+        out << rec.ToString(schema);
+        num_records++;
+      }
+      out << "\nTotal Records: " << num_records << "\n";
+      if(out_fstream_.is_open()) {
+        out_fstream_.close();
+      }
+    });
+  }
+
+  // Calls WaitUntilDone on all the QueryNodes in top down fashion.
+  // This is so that we join threads in reverse of the order in which
+  // they were created.
+  void Finish() { 
+    thread_.join();
+    root_node_->FinishNode();
+  }
+
 private:
+  thread thread_;
+
   // Statistics object for evaluating different query orders.
   Statistics stat_;
 
@@ -43,6 +80,8 @@ private:
   // Pipe id to increment and assign from.
   int curr_pipe_id_ = 0;
 
+  PMap<Pipe> pipes_;
+
   // Returns the minimum cost join order.
   void UpdateJoinOrder();
 
@@ -57,6 +96,17 @@ private:
 
   // Builds Distinct Nodes.
   void BuildDistinctNode();
+
+  ofstream out_fstream_;
+
+  ostream& GetOutMode() {
+    if(output_mode == 1) {
+      return std::cout;
+    } else {
+      out_fstream_.open(output_file);
+      return out_fstream_;
+    }
+  }
 };
 
 #endif

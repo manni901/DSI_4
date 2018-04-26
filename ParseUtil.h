@@ -55,12 +55,12 @@ public:
         bool is_valid = true;
         for (auto &cop : or_list) {
           if (cop.left.code == NAME &&
-              schema.Find(cop.left.value.c_str()) == -1) {
+              schema.Find(cop.left.value) == -1) {
             is_valid = false;
             break;
           }
           if (cop.right.code == NAME &&
-              schema.Find(cop.right.value.c_str()) == -1) {
+              schema.Find(cop.right.value) == -1) {
             is_valid = false;
             break;
           }
