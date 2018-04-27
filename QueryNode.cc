@@ -150,7 +150,7 @@ void GroupByNode::Print() {
 SumNode::SumNode(QueryNodeP input_node, FuncOperator *func, int pipe_id, PMap<Pipe> &pipes)
     : in_pipe_id_(input_node->OutPipeId()), QueryNode(pipe_id) {
   compute_.GrowFromParseTree(func, *input_node->GetSchema());
-  Attribute att = {strdup("sum"), compute_.GetType()};
+  Attribute att = {"sum", compute_.GetType()};
   vector<Attribute> atts = {att};
   schema_ = make_unique<Schema>("sumschema", 1, atts);
   children_.push_back(move(input_node));

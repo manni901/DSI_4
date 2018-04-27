@@ -43,7 +43,7 @@ public:
       int num_records = 0;
       ostream& out = GetOutMode();
       while(pipes_[out_pipe_id]->Remove(&rec)) {
-        out << rec.ToString(schema);
+        out << rec.ToString(schema) << "\n";
         num_records++;
       }
       out << "\nTotal Records: " << num_records << "\n";

@@ -49,8 +49,9 @@ public:
 
   void FinishNode() {
     Finish();
-    for (auto &child : children_) {
-      child->FinishNode();
+    int len = children_.size();
+    while(len--) {
+      children_[len]->FinishNode();
     }
   }
 

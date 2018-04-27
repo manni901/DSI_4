@@ -56,7 +56,7 @@ void WriteOut::Run() {
 void DuplicateRemoval::Run() {
   thread_ = std::thread([this]() {
     OrderMaker order(&my_schema);
-    Pipe bigq_out_pipe(1000);
+    Pipe bigq_out_pipe(100);
     BigQ Q(in_pipe, bigq_out_pipe, order, run_len_);
 
     ComparisonEngine ce;
@@ -100,7 +100,7 @@ void Sum::Run() {
 
 void GroupBy::Run() {
   thread_ = std::thread([this]() {
-    Pipe bigq_out_pipe(1000);
+    Pipe bigq_out_pipe(100);
     BigQ Q(in_pipe, bigq_out_pipe, group_atts, run_len_);
 
     int int_result = 0;
@@ -242,8 +242,8 @@ void Join::Run() {
     OrderMaker left_order, right_order;
     int is_sorting_possible = sel_op.GetSortOrders(left_order, right_order);
     if (is_sorting_possible) {
-      Pipe out_pipe_L(1000);
-      Pipe out_pipe_R(1000);
+      Pipe out_pipe_L(100);
+      Pipe out_pipe_R(100);
       BigQ LQ(in_pipe_L, out_pipe_L, left_order, run_len_);
       BigQ RQ(in_pipe_R, out_pipe_R, right_order, run_len_);
       JoinSorted(out_pipe_L, out_pipe_R, out_pipe, left_order, right_order,

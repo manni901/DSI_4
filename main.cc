@@ -76,7 +76,6 @@ int main() {
       cout << "It seems you typed in something wrong. Try again!";
       continue;
     }
-    cout << query_type << "\n";
     if (query_type == 0) {
       table_operation.Query();
     } else if (query_type == 1) {
