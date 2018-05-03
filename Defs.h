@@ -13,7 +13,7 @@ using namespace std;
 
 #define PAGE_SIZE 131072
 
-#define RUN_LEN 50
+#define RUN_LEN 100
 
 
 enum Target {Left, Right, Literal};

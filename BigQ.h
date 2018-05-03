@@ -12,6 +12,7 @@
 #include <thread>
 #include <unordered_set>
 #include <vector>
+#include "TempFileGen.h"
 
 using namespace std;
 
@@ -51,14 +52,13 @@ public:
   BigQ(Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
 
   // Will close the thread worker_.
+  void End() {
+    worker_.join();
+  }
+
   ~BigQ();
 
 private:
-  // map to store used temporary file names.
-  static unordered_set<long long int> filenames_;
-
-  // mutex for filenames_
-  static mutex mutex_;
 
   // Worker thread.
   thread worker_;

@@ -50,6 +50,13 @@ public:
 		*(T *)(bits + sizeof (int) * 2) = value;	
 	}
 
+	// Assumes Record is not empty, play with this at your own risk.
+	template<typename T> T GetFirstValue () {
+		int pointer = ((int *) bits)[1];
+		return *((T *) &(bits[pointer]));	
+	}
+
+
 	int NumAtts() {
 		if (bits == NULL) {
 			return 0;

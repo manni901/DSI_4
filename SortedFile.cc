@@ -57,6 +57,7 @@ void SortedFile::PrepareIO(Mode mode) {
       break;
     case READ:
       Merge();
+      bigq_->End();
       bigq_.reset(nullptr);
       in_pipe_.reset(nullptr);
       out_pipe_.reset(nullptr);

@@ -9,6 +9,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <ctime>
 
 using namespace std;
 
@@ -25,8 +26,8 @@ extern string output_file;
 extern int output_mode;
 extern vector<string> sort_atts;
 extern vector<pair<string, string>> tables;
-extern unordered_set<string> groupingAtts;
-extern unordered_set<string> attsToSelect;
+extern vector<string> groupingAtts;
+extern vector<string> attsToSelect;
 
 void ClearFinalFunc(FuncOperator *func) {
   if(func == NULL) return;
@@ -71,11 +72,12 @@ int main() {
           "below: \n";
 
   while (!is_exit) {
-    cout << "\n\nSADB>> ";
+    cout << "\nSADB>> ";
     if (yyparse() != 0) {
-      cout << "It seems you typed in something wrong. Try again!";
+      cout << "It seems you typed in something wrong. Try again! \n";
       continue;
     }
+    double begin = time(NULL);
     if (query_type == 0) {
       table_operation.Query();
     } else if (query_type == 1) {
@@ -85,16 +87,18 @@ int main() {
     } else if (query_type == 3) {
       table_operation.Drop();
     } else if (query_type == 4) {
-      cout << "Exiting!";
+      cout << "Exiting!\n";
       is_exit = true;
     } else if (query_type == 5) {
-      cout << "Setting output mode: " << output_mode;
+      cout << "Setting output mode: " << output_mode << "\n";
       if (output_mode == 2) {
-        cout << "\nOutput file name: " << output_file;
+        cout << "Output file name: " << output_file << "\n";
       }
     } else {
-      cout << "Invalid command. Try Again!";
+      cout << "Invalid command. Try Again!\n";
     }
+    double end = time(NULL);
+    cout << "Time Taken: " << (end - begin) << " secs\n";
     Clear();
   }
 }

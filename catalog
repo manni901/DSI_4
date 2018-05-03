@@ -27,13 +27,11 @@ o_comment String
 END
 
 BEGIN
-partsupp
-partsupp.tbl
-ps_partkey Int
-ps_suppkey Int
-ps_availqty Int
-ps_supplycost Double
-ps_comment String
+region
+region.tbl
+r_regionkey Int
+r_name String
+r_comment String
 END
 
 BEGIN

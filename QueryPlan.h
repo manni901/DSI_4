@@ -19,8 +19,8 @@ using namespace std;
 extern struct FuncOperator *finalFunction;
 extern vector<pair<string, string>> tables;
 extern struct AndList *boolean;
-extern unordered_set<string> groupingAtts;
-extern unordered_set<string> attsToSelect;
+extern vector<string> groupingAtts;
+extern vector<string> attsToSelect;
 extern int distinctAtts;
 extern int distinctFunc;
 extern string output_file;
@@ -36,33 +36,19 @@ public:
 
   void Execute() { 
     root_node_->ExecuteNode();
-    thread_ = thread([this](){
-      Schema *schema = root_node_->GetSchema();
-      int out_pipe_id = root_node_->OutPipeId();
-      Record rec;
-      int num_records = 0;
-      ostream& out = GetOutMode();
-      while(pipes_[out_pipe_id]->Remove(&rec)) {
-        out << rec.ToString(schema) << "\n";
-        num_records++;
-      }
-      out << "\nTotal Records: " << num_records << "\n";
-      if(out_fstream_.is_open()) {
-        out_fstream_.close();
-      }
-    });
   }
 
   // Calls WaitUntilDone on all the QueryNodes in top down fashion.
   // This is so that we join threads in reverse of the order in which
   // they were created.
   void Finish() { 
-    thread_.join();
     root_node_->FinishNode();
+    if(out_fstream_.is_open()) {
+      out_fstream_.close();
+    }
   }
 
 private:
-  thread thread_;
 
   // Statistics object for evaluating different query orders.
   Statistics stat_;

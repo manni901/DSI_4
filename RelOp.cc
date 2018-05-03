@@ -1,4 +1,5 @@
 #include "RelOp.h"
+#include "BigQDistinct.h"
 #include "CrossJoin.h"
 #include "TempFileGen.h"
 
@@ -46,18 +47,21 @@ void Project::Run() {
 
 void WriteOut::Run() {
   thread_ = std::thread([this]() {
+    int num_records = 0;
     Record rec;
     while (in_pipe.Remove(&rec)) {
-      fprintf(out_file, "%s\n", rec.ToString(&my_schema).c_str());
+      out_ << rec.ToString(&my_schema) << "\n";
+      num_records++;
     }
+    out_ << "\nTotal Records: " << num_records << "\n";
   });
 }
 
 void DuplicateRemoval::Run() {
   thread_ = std::thread([this]() {
     OrderMaker order(&my_schema);
-    Pipe bigq_out_pipe(100);
-    BigQ Q(in_pipe, bigq_out_pipe, order, run_len_);
+    Pipe bigq_out_pipe(1000);
+    Q_ = make_unique<BigQ>(in_pipe, bigq_out_pipe, order, run_len_);
 
     ComparisonEngine ce;
     Record prev_rec;
@@ -66,11 +70,11 @@ void DuplicateRemoval::Run() {
     if (res == 1) {
       Record temp = prev_rec;
       out_pipe.Insert(&temp);
-    }
-    while (bigq_out_pipe.Remove(&curr_rec)) {
-      if (ce.Compare(&prev_rec, &curr_rec, &order) != 0) {
-        prev_rec = curr_rec;
-        out_pipe.Insert(&curr_rec);
+      while (bigq_out_pipe.Remove(&curr_rec)) {
+        if (ce.Compare(&prev_rec, &curr_rec, &order) != 0) {
+          prev_rec = curr_rec;
+          out_pipe.Insert(&curr_rec);
+        }
       }
     }
     out_pipe.ShutDown();
@@ -83,16 +87,50 @@ void Sum::Run() {
     double double_result = 0.0, double_temp;
     Record rec;
     Type result_type;
-    while (in_pipe.Remove(&rec)) {
-      result_type = compute_me.Apply(rec, int_temp, double_temp);
-      int_result += int_temp;
-      double_result += double_temp;
+
+    auto set_single_record = [&result_type](Record &rec, int int_result,
+                                            double double_result) {
+      if (result_type == Int) {
+        rec.SetSingleValue(int_result);
+      } else if (result_type == Double) {
+        rec.SetSingleValue(double_result);
+      }
+    };
+
+    if (distinct_) {
+      Record cop;
+      int res = in_pipe.Remove(&cop);
+      if (!res)
+        return;
+      result_type = compute_me.Apply(cop, int_temp, double_temp);
+      set_single_record(cop, int_temp, double_temp);
+      OrderMaker o;
+      o.AddAtt(0, result_type);
+      Pipe distinct_pipe;
+      BigQDistinct distinct_q(distinct_pipe, o, run_len_);
+      distinct_pipe.Insert(&cop);
+
+      Record copy;
+      while (in_pipe.Remove(&copy)) {
+        Record topy;
+        result_type = compute_me.Apply(copy, int_temp, double_temp);
+        set_single_record(topy, int_temp, double_temp);
+        distinct_pipe.Insert(&topy);
+      }
+      distinct_pipe.ShutDown();
+      if (result_type == Int) {
+        int_result = distinct_q.GetDistinctSum<int>();
+      } else {
+        double_result = distinct_q.GetDistinctSum<double>();
+      }
+    } else {
+      while (in_pipe.Remove(&rec)) {
+        result_type = compute_me.Apply(rec, int_temp, double_temp);
+        int_result += int_temp;
+        double_result += double_temp;
+      }
     }
-    if (result_type == Int) {
-      rec.SetSingleValue(int_result);
-    } else if (result_type == Double) {
-      rec.SetSingleValue(double_result);
-    }
+    set_single_record(rec, int_result, double_result);
     out_pipe.Insert(&rec);
     out_pipe.ShutDown();
   });
@@ -100,24 +138,38 @@ void Sum::Run() {
 
 void GroupBy::Run() {
   thread_ = std::thread([this]() {
-    Pipe bigq_out_pipe(100);
-    BigQ Q(in_pipe, bigq_out_pipe, group_atts, run_len_);
+    Pipe bigq_out_pipe(1000);
+    Q_ = make_unique<BigQ>(in_pipe, bigq_out_pipe, group_atts, run_len_);
 
-    int int_result = 0;
-    double double_result = 0.0;
+    int int_result = 0, int_temp = 0;
+    double double_result = 0.0, double_temp = 0.0;
     Type result_type = String;
 
     ComparisonEngine ce;
     Record prev_rec;
     Record curr_rec;
 
+    auto add_to_pipe = [this, &result_type](Record &curr_r, Pipe &pipe) {
+      int int_temp = 0;
+      double double_temp = 0.0;
+      result_type = compute_me.Apply(curr_r, int_temp, double_temp);
+      Record rec;
+      if (result_type == Int) {
+        rec.SetSingleValue<int>(int_temp);
+        pipe.Insert(&rec);
+      } else {
+        rec.SetSingleValue<double>(double_temp);
+        pipe.Insert(&rec);
+      }
+    };
+
     // Inline method to apply function to curr_rec and
     // store result in int_result or double_result.
     auto add_sum = [this, &int_result, &double_result,
-                    &result_type](Record &curr_rec) {
-      int int_temp;
-      double double_temp;
-      result_type = compute_me.Apply(curr_rec, int_temp, double_temp);
+                    &result_type](Record &curr_r) {
+      int int_temp = 0;
+      double double_temp = 0.0;
+      result_type = compute_me.Apply(curr_r, int_temp, double_temp);
       int_result += int_temp;
       double_result += double_temp;
     };
@@ -136,7 +188,7 @@ void GroupBy::Run() {
     // Projects the curr_rec using the given OrderMaker and merges the two
     // records together.
     auto func = [&result_type, &int_result, &double_result, &atts_to_keep,
-                 this](Record &curr_rec) {
+                 this](Record &curr_r) {
       Record rec;
       if (result_type == Int) {
         rec.SetSingleValue(int_result);
@@ -145,22 +197,62 @@ void GroupBy::Run() {
       }
 
       Record temp;
-      temp.MergeRecords(&rec, &curr_rec, 1, curr_rec.NumAtts(),
-                        atts_to_keep.data(), atts_to_keep.size(), 1);
+      temp.MergeRecords(&rec, &curr_r, 1, curr_r.NumAtts(), atts_to_keep.data(),
+                        atts_to_keep.size(), 1);
       out_pipe.Insert(&temp);
       int_result = 0;
       double_result = 0.0;
     };
 
-    while (bigq_out_pipe.Remove(&curr_rec)) {
-      if (ce.Compare(&prev_rec, &curr_rec, &group_atts) != 0) {
+    // If distinct sum, we need to remove duplicate sum value within a group
+    // This is done by creating one BigQ per group and calculating their
+    // distinct sum using the BigQDistinct class.
+    if (distinct_) {
+
+      OrderMaker o;
+      o.AddAtt(0, result_type);
+      unique_ptr<Pipe> distinct_pipe = make_unique<Pipe>();
+      unique_ptr<BigQDistinct> distinct_q =
+          make_unique<BigQDistinct>(*distinct_pipe.get(), o, run_len_);
+      add_to_pipe(prev_rec, *distinct_pipe.get());
+      while (bigq_out_pipe.Remove(&curr_rec)) {
+        if (ce.Compare(&prev_rec, &curr_rec, &group_atts) != 0) {
+          distinct_pipe->ShutDown();
+          if (result_type == Int) {
+            int_result = distinct_q->GetDistinctSum<int>();
+          } else {
+            double_result = distinct_q->GetDistinctSum<double>();
+          }
+          func(prev_rec);
+          distinct_pipe.reset(new Pipe());
+          distinct_q.reset(new BigQDistinct(*distinct_pipe.get(), o, run_len_));
+        }
+        add_to_pipe(curr_rec, *distinct_pipe.get());
+        prev_rec = curr_rec;
+      }
+      if (result_type == Int || result_type == Double) {
+        distinct_pipe->ShutDown();
+        if (result_type == Int) {
+          int_result = distinct_q->GetDistinctSum<int>();
+        } else {
+          double_result = distinct_q->GetDistinctSum<double>();
+        }
+        func(prev_rec);
+        distinct_pipe.reset(nullptr);
+        distinct_q.reset(nullptr);
+      }
+    } else {
+
+      while (bigq_out_pipe.Remove(&curr_rec)) {
+        if (ce.Compare(&prev_rec, &curr_rec, &group_atts) != 0) {
+          func(prev_rec);
+        }
+        add_sum(curr_rec);
+        prev_rec = curr_rec;
+      }
+      if (result_type == Int || result_type == Double) {
         func(prev_rec);
       }
-      add_sum(curr_rec);
-      prev_rec = curr_rec;
-    }
-    if (result_type == Int || result_type == Double) {
-      func(prev_rec);
     }
     out_pipe.ShutDown();
   });
@@ -187,11 +279,12 @@ void JoinSorted(Pipe &in_pipe_L, Pipe &in_pipe_R, Pipe &out_pipe,
           return;
       }
     }
-    c_join.AddLeft(left);
+    c_join.AddLeft(left, false /* consume */);
     Record temp;
     is_left = in_pipe_L.Remove(&temp);
     while (is_left == 1 && ce.Compare(&left, &temp, &left_order) == 0) {
       if (!c_join.AddLeft(temp)) {
+        cout << "Not enough space in join buffer\n";
         exit(1);
       }
       is_left = in_pipe_L.Remove(&temp);
@@ -218,6 +311,8 @@ void JoinUnsorted(Pipe &in_pipe_L, Pipe &in_pipe_R, Pipe &out_pipe, CNF &sel_op,
   while (in_pipe_R.Remove(&temp)) {
     db_file.Add(temp);
   }
+  db_file.Close();
+  db_file.Open(to_string(filename).c_str());
 
   CrossJoin c_join(run_len);
   while (in_pipe_L.Remove(&temp)) {
@@ -242,12 +337,19 @@ void Join::Run() {
     OrderMaker left_order, right_order;
     int is_sorting_possible = sel_op.GetSortOrders(left_order, right_order);
     if (is_sorting_possible) {
-      Pipe out_pipe_L(100);
-      Pipe out_pipe_R(100);
-      BigQ LQ(in_pipe_L, out_pipe_L, left_order, run_len_);
-      BigQ RQ(in_pipe_R, out_pipe_R, right_order, run_len_);
+      Pipe out_pipe_L(1000);
+      Pipe out_pipe_R(1000);
+      LQ_ = make_unique<BigQ>(in_pipe_L, out_pipe_L, left_order, run_len_);
+      RQ_ = make_unique<BigQ>(in_pipe_R, out_pipe_R, right_order, run_len_);
       JoinSorted(out_pipe_L, out_pipe_R, out_pipe, left_order, right_order,
                  sel_op, literal, run_len_);
+      Record rec;
+
+      // Remove unused records.
+      while (out_pipe_L.Remove(&rec)) {
+      }
+      while (out_pipe_R.Remove(&rec)) {
+      }
     } else {
       JoinUnsorted(in_pipe_L, in_pipe_R, out_pipe, sel_op, literal, run_len_);
     }

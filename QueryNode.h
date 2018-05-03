@@ -13,6 +13,8 @@
 #include <unordered_map>
 using namespace std;
 
+extern int distinctFunc;
+
 #define QueryNodeP unique_ptr<QueryNode>
 
 class QueryNode {
@@ -79,6 +81,14 @@ protected:
   vector<QueryNodeP> children_;
 };
 
+class WriteOutNode : public QueryNode {
+  private:
+  int in_pipe_id_;
+  public:
+  WriteOutNode(QueryNodeP input_node, ostream& out, PMap<Pipe> &pipes);
+  void Print();
+};
+
 class SelectPipeNode : public QueryNode {
 private:
   CNF cnf_;
@@ -88,7 +98,6 @@ public:
   SelectPipeNode(ParseVector &parse_vector, BitSet &selector,
                  unique_ptr<Schema> schema, QueryNodeP input_node, int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 class ProjectNode : public QueryNode {
@@ -96,10 +105,9 @@ private:
   int in_pipe_id_;
 
 public:
-  ProjectNode(QueryNodeP input_node, unordered_set<string> &att_names,
+  ProjectNode(QueryNodeP input_node, vector<string> &att_names,
               int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 class DuplicateRemovalNode : public QueryNode {
@@ -109,7 +117,6 @@ private:
 public:
   DuplicateRemovalNode(QueryNodeP input_node, int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 class SelectFileNode : public QueryNode {
@@ -121,7 +128,6 @@ public:
   SelectFileNode(ParseVector &parse_vector, BitSet &selector, string table_name,
                  unique_ptr<Schema> schema, int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 
   ~SelectFileNode() {
     db_file_.Close();
@@ -139,7 +145,6 @@ public:
            unique_ptr<Schema> schema, QueryNodeP left, QueryNodeP right,
            int out_pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 class GroupByNode : public QueryNode {
@@ -149,10 +154,9 @@ private:
   int in_pipe_id_;
 
 public:
-  GroupByNode(QueryNodeP input_node, unordered_set<string> &grouping_atts,
+  GroupByNode(QueryNodeP input_node, vector<string> &grouping_atts,
               FuncOperator *func, int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 class SumNode : public QueryNode {
@@ -163,7 +167,6 @@ private:
 public:
   SumNode(QueryNodeP input_node, FuncOperator *func, int pipe_id, PMap<Pipe> &pipes);
   void Print();
-  void Execute();
 };
 
 #endif

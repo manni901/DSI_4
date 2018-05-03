@@ -13,19 +13,27 @@ public:
   CrossJoin(int run_len) : left_size_(PAGE_SIZE * run_len) {}
   ~CrossJoin() = default;
 
-  bool AddLeft(Record &rec) {
+  bool AddLeft(Record &rec, bool consume = true) {
     int rec_size = rec.GetSize();
     if (left_size_used_ + rec_size < left_size_) {
-      left_.push_back(rec);
+      if (consume) {
+        left_.push_back(Record());
+        left_.back().Consume(&rec);
+      } else {
+        left_.push_back(rec);
+      }
       left_size_used_ += rec_size;
       return true;
     }
     return false;
   }
 
-  void ClearLeft() { left_.clear(); }
+  void ClearLeft() {
+    left_.clear();
+    left_size_used_ = 0;
+  }
 
-  void SetRight(Record &rec) { right_ = rec; }
+  void SetRight(Record &rec) { right_.Consume(&rec); }
 
   void Exectute(Pipe &out_pipe, CNF &sel_op, Record &literal) {
     if (left_.size() == 0) {
@@ -48,9 +56,9 @@ public:
       if (ce.Compare(&rec_left, &temp, &literal, &sel_op)) {
         rec.MergeRecords(&rec_left, &temp, num_left, num_right, atts.data(),
                          num_left + num_right, num_left);
+        out_pipe.Insert(&rec);
       }
     }
-    out_pipe.Insert(&rec);
   }
 
 private:

@@ -8,7 +8,7 @@ QueryPlan::QueryPlan(string stat_file) {
   parse_vector_ = ParseUtil::AndListToVector(boolean);
 
   // Copy relations needed for the query.
-  for (auto& temp : tables) {
+  for (auto &temp : tables) {
     stat_.CopyRel(temp.first.c_str(), temp.second.c_str());
     table_names_.push_back(temp.first);
     alias_[temp.first] = temp.second;
@@ -19,6 +19,10 @@ QueryPlan::QueryPlan(string stat_file) {
   BuildGroupByNode();
   BuildProjectNode();
   BuildDistinctNode();
+
+  auto write_node =
+      make_unique<WriteOutNode>(move(root_node_), GetOutMode(), pipes_);
+  root_node_ = move(write_node);
 }
 
 void QueryPlan::UpdateJoinOrder() {
@@ -44,8 +48,7 @@ void QueryPlan::UpdateJoinOrder() {
       relNames.push_back(alias_[table_name]);
 
       // Combine schema for join node.
-      new_schema =
-          make_unique<Schema>(catalog, table_name, alias_[table_name]);
+      new_schema = make_unique<Schema>(catalog, table_name, alias_[table_name]);
       if (schema) {
         combined_schema = make_unique<Schema>(schema.get(), new_schema.get());
         schema = move(combined_schema);
@@ -79,12 +82,13 @@ void QueryPlan::BuildJoinNodes() {
   auto curr_selector =
       ParseUtil::FilterParseVector(parse_vector_, *schema.get(), selector);
   pipes_[curr_pipe_id_] = make_unique<Pipe>();
-  root_node_ = make_unique<SelectFileNode>(parse_vector_, curr_selector, table_names_[0],
-                                           move(schema), curr_pipe_id_++, pipes_);
+  root_node_ =
+      make_unique<SelectFileNode>(parse_vector_, curr_selector, table_names_[0],
+                                  move(schema), curr_pipe_id_++, pipes_);
 
   for (int i = 1; i < table_names_.size(); i++) {
-    schema = make_unique<Schema>(catalog, table_names_[i],
-                                 alias_[table_names_[i]]);
+    schema =
+        make_unique<Schema>(catalog, table_names_[i], alias_[table_names_[i]]);
     auto curr_selector =
         ParseUtil::FilterParseVector(parse_vector_, *schema.get(), selector);
 
@@ -94,33 +98,28 @@ void QueryPlan::BuildJoinNodes() {
         parse_vector_, *join_schema.get(), selector);
 
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    auto sf_node = make_unique<SelectFileNode>(parse_vector_, curr_selector, table_names_[i],
-                                               move(schema), curr_pipe_id_++, pipes_);
+    auto sf_node = make_unique<SelectFileNode>(parse_vector_, curr_selector,
+                                               table_names_[i], move(schema),
+                                               curr_pipe_id_++, pipes_);
 
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    auto join_node =
-        make_unique<JoinNode>(parse_vector_, join_selector, move(join_schema),
-                              move(root_node_), move(sf_node), curr_pipe_id_++, pipes_);
+    auto join_node = make_unique<JoinNode>(
+        parse_vector_, join_selector, move(join_schema), move(root_node_),
+        move(sf_node), curr_pipe_id_++, pipes_);
     root_node_ = move(join_node);
   }
 }
 
 void QueryPlan::BuildGroupByNode() {
   if (groupingAtts.size() > 0) {
-    if (distinctFunc) {
-      pipes_[curr_pipe_id_] = make_unique<Pipe>();
-      auto dup_node =
-          make_unique<DuplicateRemovalNode>(move(root_node_), curr_pipe_id_++, pipes_);
-      root_node_ = move(dup_node);
-    }
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    auto group_node = make_unique<GroupByNode>(move(root_node_), groupingAtts,
-                                               finalFunction, curr_pipe_id_++, pipes_);
+    auto group_node = make_unique<GroupByNode>(
+        move(root_node_), groupingAtts, finalFunction, curr_pipe_id_++, pipes_);
     root_node_ = move(group_node);
   } else if (finalFunction) {
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    auto sum_node =
-        make_unique<SumNode>(move(root_node_), finalFunction, curr_pipe_id_++, pipes_);
+    auto sum_node = make_unique<SumNode>(move(root_node_), finalFunction,
+                                         curr_pipe_id_++, pipes_);
     root_node_ = move(sum_node);
   }
 }
@@ -128,10 +127,9 @@ void QueryPlan::BuildGroupByNode() {
 void QueryPlan::BuildProjectNode() {
   if (attsToSelect.size() > 0) {
     if (finalFunction != NULL) {
-      attsToSelect.insert("sum");
+      attsToSelect.insert(attsToSelect.begin(), "sum");
     }
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    root_node_->GetSchema()->Print();
     auto project_node = make_unique<ProjectNode>(move(root_node_), attsToSelect,
                                                  curr_pipe_id_++, pipes_);
     root_node_ = move(project_node);
@@ -141,8 +139,8 @@ void QueryPlan::BuildProjectNode() {
 void QueryPlan::BuildDistinctNode() {
   if (distinctAtts) {
     pipes_[curr_pipe_id_] = make_unique<Pipe>();
-    auto dup_node =
-        make_unique<DuplicateRemovalNode>(move(root_node_), curr_pipe_id_++, pipes_);
+    auto dup_node = make_unique<DuplicateRemovalNode>(move(root_node_),
+                                                      curr_pipe_id_++, pipes_);
     root_node_ = move(dup_node);
   }
 }

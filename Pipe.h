@@ -1,7 +1,7 @@
 #ifndef PIPE_H
 #define PIPE_H
 
-#define PIPE_BUFFER_SIZE 100
+#define PIPE_BUFFER_SIZE 1000
 
 #include <pthread.h>
 

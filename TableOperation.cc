@@ -1,5 +1,9 @@
 #include "TableOperation.h"
 
+TableOperation::~TableOperation() {
+  DeleteDroppedSchema();
+}
+
 bool TableOperation::IsExistingTable(string table_name) {
   if(dropped_tables_.find(table_name) != dropped_tables_.end()) {
       return false;
@@ -102,3 +106,38 @@ void TableOperation::Query() {
     plan.Finish();
   }
 }
+
+void TableOperation::DeleteDroppedSchema() {
+    int random_file_name = TempFileGen::GenFileName();
+    string r_file_name = to_string(random_file_name);
+    
+    rename(catalog_file_.c_str(), r_file_name.c_str());
+
+    ifstream in(r_file_name);
+    ofstream out(catalog_file_);
+    string table_name;
+    Schema schema;
+    while(GetNextTableSchema(in, schema, table_name)) {
+      if (dropped_tables_.find(table_name) == dropped_tables_.end()) {
+        schema.WriteToCatalog(catalog_file_);
+      }
+    }
+    remove(r_file_name.c_str());
+  }
+
+  bool TableOperation::GetNextTableSchema(ifstream &in, Schema &schema, string &table_name) {
+    string val, type_name;
+    vector<Attribute> attr;
+    while (in >> val && val != "BEGIN") { }
+    if (val != "BEGIN") return false;
+    in >> table_name;
+    in >> val;
+    while (in >> val && val != "END") {
+      in >> type_name;
+      Type type =
+          type_name == "Int" ? Int : (type_name == "Double" ? Double : String);
+      attr.push_back({val, type});
+    }
+    schema = Schema(table_name, attr.size(), attr);
+    return true;
+  }

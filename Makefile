@@ -72,14 +72,18 @@ a21.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.
 test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o Pipe.o y.tab.o lex.yy.o test.o
 	$(CC) $^ -o $@ -ll -lpthread
 	
-HeapFile_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o y.tab.o lex.yy.o HeapFile.o SortedFile.o Pipe.o HeapFile_Test.o gtest_main.a
+HeapFile_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o lex.yy.o HeapFile_Test.o gtest_main.a
 	$(CC) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
-BigQ_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o y.tab.o lex.yy.o HeapFile.o SortedFile.o Pipe.o BigQ_Test.o gtest_main.a
+BigQ_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o lex.yy.o BigQ_Test.o gtest_main.a
 	$(CC) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 DBEngine: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o Statistics.o y.tab.o lex.yy.o QueryNode.o QueryPlan.o TableOperation.o main.o
 	$(CC) $^ -o $@ -ll -lpthread
+
+SortedFile_Test : Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o HeapFile.o SortedFile.o RelOp.o Function.o Pipe.o y.tab.o lex.yy.o SortedFile_Test.cc gtest_main.a
+	$(CC) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+
 
 test4-1.o: test4-1.cc
 	$(CC) -g -c test4-1.cc

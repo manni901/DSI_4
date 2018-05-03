@@ -52,6 +52,8 @@ public:
 	// this finds the type of the given attribute
 	Type FindType (string& attName);
 
+	Schema() = default;
+
 	// this reads the specification for the schema in from a file
 	Schema (string fName, string relName, string alias = "");
 

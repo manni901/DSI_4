@@ -21,6 +21,10 @@ public:
   // Opens the file by calling file_.Open.
   virtual int Open(int length, const char *fpath, void *startup) {
     file_.Open(length, fpath);
+    if (file_.GetLength() >= 2) {
+      page_index_ = file_.GetLength() - 2;
+      file_.GetPage(&page_, page_index_);
+    }
     return 1;
   }
 

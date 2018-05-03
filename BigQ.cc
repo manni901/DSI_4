@@ -1,23 +1,14 @@
 #include "BigQ.h"
 #include "time.h"
 
-unordered_set<long long int> BigQ::filenames_;
-
-mutex BigQ::mutex_;
-
 BigQ::BigQ(Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
   worker_ = thread([this, &in, &out, &sortorder, runlen]() {
     // read data from in pipe sort them into runlen pages
     srand (time(NULL));
-    long long int file_name = rand() % LONG_MAX;
+    long long int file_name = TempFileGen::GenFileName();
     string filename;
-    mutex_.lock();
-    while (!filenames_.insert(rand() % LONG_MAX).second) {
-      file_name = rand() % LONG_MAX;
-    }
     filename = to_string(file_name);
     file_.Open(0, filename.c_str());
-    mutex_.unlock();
 
     Record rec;
     // Record rec_copy;
@@ -47,16 +38,14 @@ BigQ::BigQ(Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
     file_.Close();
     remove(filename.c_str());
 
-    mutex_.lock();
-    filenames_.erase(file_name);
-    mutex_.unlock();
+    TempFileGen::RemoveFile(file_name);
 
     // finally shut down the out pipe
     out.ShutDown();
   });
 }
 
-BigQ::~BigQ() { worker_.join(); }
+BigQ::~BigQ() {}
 
 void BigQ::SortNSave(OrderMaker &sortorder) {
   Page copy_page;

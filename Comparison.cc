@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <unordered_map>
 
 #include "Comparison.h"
@@ -402,6 +403,9 @@ void CNF :: GrowFromParseTree (ParseVector &parseTree, BitSet &selector, Schema 
 
 	// and get the record
 	literal.SuckNextRecord (&mySchema, outRecFile);
+	cout << "RECORD: ";
+	literal.Print(&mySchema);
+	cout << "\n";
 
 	// close the record file
 	fclose (outRecFile);

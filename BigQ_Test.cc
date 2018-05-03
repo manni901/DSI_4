@@ -3,6 +3,7 @@
 #include "HeapFile.h"
 #include "cstdio"
 #include "gtest/gtest.h"
+#include "ParseUtil.h"
 
 extern "C" {
 int yyparse(void); // defined in y.tab.c
@@ -10,7 +11,7 @@ struct yy_buffer_state *yy_scan_string(const char *yy_str);
 void yy_delete_buffer(struct yy_buffer_state *b);
 }
 
-extern struct AndList * final;
+extern struct AndList * boolean;
 
 namespace {
 
@@ -20,11 +21,11 @@ TEST(BigQTest, SimpleSortTest) {
   const char *file_path = "10M/lineitem.tbl";
   const char *table_bin_path = "lineitem-test.bin";
   // suck up the schema from the file
-  Schema lineitem(catalog, "lineitem");
+  Schema lineitem("catalog_old", "lineitem");
 
   // To parse from string instead of stdin
   // (https://lists.gnu.org/archive/html/help-bison/2006-01/msg00054.html)
-  auto string_buffer = yy_scan_string("(l_partkey)");
+  auto string_buffer = yy_scan_string("SELECT ll FROM lineitem AS l WHERE (l_partkey > 5);");
   yyparse();
   yy_delete_buffer(string_buffer);
 
@@ -32,7 +33,10 @@ TEST(BigQTest, SimpleSortTest) {
   OrderMaker sortorder;
   CNF myComparison;
   Record literal;
-  myComparison.GrowFromParseTree(final, &lineitem, literal);
+  auto parse_vector = ParseUtil::AndListToVector(boolean);
+  BitSet bitset;
+  bitset.set(0);
+  myComparison.GrowFromParseTree(parse_vector, bitset, &lineitem, literal);
   OrderMaker dummy;
   myComparison.GetSortOrders(sortorder, dummy);
 
@@ -80,8 +84,9 @@ TEST(BigQTest, SimpleSortTest) {
   int runlen = 5;
   BigQ bigQ(input, output, sortorder, runlen);
 
-  producer.join();
+  bigQ.End();
   consumer.join();
+  producer.join();
   dbfile.Close();
 
   // Check that all records are processed by BigQ.

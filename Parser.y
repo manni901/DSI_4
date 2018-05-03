@@ -17,8 +17,8 @@
 	struct FuncOperator *finalFunction; // the aggregate function (NULL if no agg)
 	std::vector<std::pair<std::string, std::string>> tables; // the list of tables and aliases in the query
 	struct AndList *boolean; // the predicate in the WHERE clause
-	std::unordered_set<std::string> groupingAtts; // grouping atts (NULL if no grouping)
-	std::unordered_set<std::string> attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
+	std::vector<std::string> groupingAtts; // grouping atts (NULL if no grouping)
+	std::vector<std::string> attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
 	int distinctAtts; // 1 if there is a DISTINCT in a non-aggregate query 
 	int distinctFunc;  // 1 if there is a DISTINCT in an aggregate query
 	std::string mytable; // table name for create table.
@@ -144,15 +144,6 @@ SQL: SELECT WhatIWant FROM Tables WHERE AndList ';'
 }
 ;
 
-File: Stringg
-{
-	insert_file_name = $1;
-}
-| Name
-{
-	insert_file_name = $1;
-}
-
 Output: STDOUT
 {
 	output_mode = 1;
@@ -161,11 +152,22 @@ Output: STDOUT
 {
 	output_mode = 0;
 }
-| Name
+| Stringg
 {
 	output_mode = 2;
 	output_file = $1;
 }
+;
+
+File: Stringg
+{
+	insert_file_name = $1;
+}
+| Name
+{
+	insert_file_name = $1;
+}
+;
 
 TableType: HEAP
 {
@@ -236,12 +238,12 @@ Typ: INTEGERR
 
 GroupAtts: Name
 {
-	groupingAtts.insert($1);
+	groupingAtts.push_back($1);
 } 
 
 | GroupAtts ',' Name
 {
-	groupingAtts.insert($3);
+	groupingAtts.push_back($3);
 };
 
 SortAtts: Name
@@ -256,12 +258,12 @@ SortAtts: Name
 
 Atts: Name
 {
-	attsToSelect.insert($1);
+	attsToSelect.push_back($1);
 } 
 
 | Atts ',' Name
 {
-	attsToSelect.insert($3);
+	attsToSelect.push_back($3);
 };
 
 Tables: Name AS Name 

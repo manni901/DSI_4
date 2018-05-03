@@ -1,14 +1,14 @@
 #ifndef TABLE_OPERATION_H
 #define TABLE_OPERATION_H
 
-#include <iostream>
-#include <vector>
-#include <unordered_set>
-#include <ostream>
-#include "Defs.h"
 #include "DBFile.h"
-#include "Schema.h"
+#include "Defs.h"
 #include "QueryPlan.h"
+#include "Schema.h"
+#include <iostream>
+#include <ostream>
+#include <unordered_set>
+#include <vector>
 using namespace std;
 
 extern string mytable;
@@ -18,11 +18,13 @@ extern vector<string> sort_atts;
 extern string insert_file_name;
 extern int output_mode;
 
-
 class TableOperation {
 public:
   TableOperation(string stat_file, string catalog_file)
       : stat_file_(stat_file), catalog_file_(catalog_file) {}
+
+  ~TableOperation();
+
   bool Create();
   bool Insert();
   bool Drop();
@@ -33,7 +35,6 @@ private:
   string catalog_file_;
 
   bool IsExistingTable(string table_name);
-  bool AddSchemaToCatalog(Schema &schema);
 
   string GetDBFileName(string table_name) {
     return db_file_prefix + mytable + ".bin";
@@ -43,6 +44,10 @@ private:
   //(TODO) On closing the db engine, remove these
   // tables from catalog.
   unordered_set<string> dropped_tables_;
+
+  void DeleteDroppedSchema();
+
+  bool GetNextTableSchema(ifstream &in, Schema &schema, string &table_name);
 };
 
 #endif

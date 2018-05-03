@@ -2,6 +2,7 @@
 #include "DBFile.h"
 #include "gtest/gtest.h"
 #include "cstdio"
+#include "ParseUtil.h"
 
 extern "C" {
   int yyparse(void);   // defined in y.tab.c
@@ -9,7 +10,7 @@ extern "C" {
   void yy_delete_buffer (struct yy_buffer_state* b  );
 }
 
-extern struct AndList *final;
+extern struct AndList *boolean;
 
 namespace {
 
@@ -25,7 +26,7 @@ TEST(HeapFileTest, LoadCountTest) {
   dbfile.Create (table_bin_path, heap, NULL);
 
   // suck up the schema from the file
-  Schema lineitem (catalog, "lineitem");
+  Schema lineitem ("catalog_old", "lineitem");
 
   dbfile.Load (lineitem, file_path);
   dbfile.Close ();
@@ -51,18 +52,22 @@ TEST(HeapFileTest, CNFTest) {
   const char* file_path = "10M/nation.tbl";
   const char* table_bin_path = "nation-test.bin";
   // suck up the schema from the file
-  Schema nation (catalog, "nation");
+  Schema nation ("catalog_old", "nation");
   
   // To parse from string instead of stdin
   // (https://lists.gnu.org/archive/html/help-bison/2006-01/msg00054.html)
-  auto string_buffer = yy_scan_string ("(n_name = 'INDIA')");
+  auto string_buffer = yy_scan_string ("SELECT n_name FROM nation AS n WHERE (n_name = 'INDIA');");
   yyparse();
   yy_delete_buffer (string_buffer);
 
   // grow the CNF expression from the parse tree 
+  cout << "here\n";
   CNF myComparison;
   Record literal;
-  myComparison.GrowFromParseTree (final, &nation, literal);
+  auto parse_vector = ParseUtil::AndListToVector(boolean);
+  BitSet bitset;
+  bitset.set(0);
+  myComparison.GrowFromParseTree (parse_vector, bitset, &nation, literal);
 
   int expected_records = 1;
   std::string expected_record_string = 
